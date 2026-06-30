@@ -15,6 +15,7 @@ A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 | `d` / `u` | Scroll a half-page down / up. |
 | `g g` / `Shift`+`G` | Jump to top / bottom. |
 | `Shift`+`J` / `Shift`+`K` | Switch to the next / previous tab. |
+| `o` | Open the quick switcher (jump to another note). |
 | `i` | Enter editing mode (focus the editor; native Vim active). |
 | `Esc` `Esc` | (In editing mode) return to Reading mode. |
 

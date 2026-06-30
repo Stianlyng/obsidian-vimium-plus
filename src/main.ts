@@ -209,6 +209,9 @@ export default class VimiumPlugin extends Plugin {
 			case "i":
 				void this.modeManager.enterEditing();
 				return true;
+			case "o":
+				this.app.commands.executeCommandById("switcher:open");
+				return true;
 			default:
 				return false;
 		}
