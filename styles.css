@@ -1,0 +1,55 @@
+/* ---- Vimium for Obsidian ---- */
+
+/* Overlay container holding all hint markers. Fixed to the viewport so marker
+   positions can be computed straight from getBoundingClientRect(). */
+.vimium-hint-container {
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	z-index: var(--layer-popover, 30);
+}
+
+/* A single hint label sitting at the top-left of its target element. */
+.vimium-hint-marker {
+	position: fixed;
+	display: inline-block;
+	padding: 0 3px;
+	border: 1px solid #c08a00;
+	border-radius: 3px;
+	background: linear-gradient(#fff785, #ffc542);
+	color: #302505;
+	font-family: var(--font-monospace, monospace);
+	font-size: var(--vimium-hint-font-size, 11px);
+	font-weight: 700;
+	line-height: 1.4;
+	text-transform: uppercase;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+/* The portion of a hint the user has already typed. */
+.vimium-hint-marker .vimium-hint-typed {
+	color: #d4a017;
+	opacity: 0.55;
+}
+
+/* Markers whose label no longer matches the typed prefix. */
+.vimium-hint-marker.vimium-hint-filtered {
+	display: none;
+}
+
+/* Small status pill shown while a mode is active. */
+.vimium-mode-indicator {
+	position: fixed;
+	bottom: 8px;
+	right: 12px;
+	padding: 2px 8px;
+	border-radius: 4px;
+	background: var(--background-secondary-alt);
+	color: var(--text-muted);
+	font-size: 11px;
+	font-family: var(--font-monospace, monospace);
+	z-index: var(--layer-popover, 30);
+	pointer-events: none;
+}

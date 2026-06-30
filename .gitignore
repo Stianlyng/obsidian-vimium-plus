@@ -1,0 +1,8 @@
+# build / deps
+node_modules/
+main.js
+*.js.map
+
+# editors / os
+.DS_Store
+*.log
