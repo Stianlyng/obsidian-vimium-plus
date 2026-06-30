@@ -19,7 +19,7 @@ A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 | `i` | Enter editing mode (focus the editor; native Vim active). |
 | `Esc` `Esc` | (In editing mode) return to Reading mode. |
 
-While hints are showing: type the label to activate, `Backspace` to correct, `Esc` to cancel.
+While hints are showing: type the label to activate, `Backspace` to correct, `Esc` to cancel. Holding `Shift` on the **last** letter of a label opens that target in a new tab (even if you started with plain `f`).
 
 ## How the modes map to Obsidian
 

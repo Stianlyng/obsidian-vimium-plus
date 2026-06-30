@@ -104,7 +104,9 @@ export class HintEngine {
 		this.typed = candidate;
 		const exact = this.hints.find((h) => h.label === this.typed);
 		if (exact) {
-			this.activate(exact.el);
+			// Holding Shift on the final letter forces open-in-new-tab, even if
+			// the session started as a plain `f`.
+			this.activate(exact.el, this.newTab || e.shiftKey);
 			return true;
 		}
 
@@ -135,11 +137,11 @@ export class HintEngine {
 		}
 	}
 
-	private activate(el: HTMLElement): void {
+	private activate(el: HTMLElement, newTab: boolean): void {
 		this.hide();
 		this.onExit();
 
-		if (this.newTab) {
+		if (newTab) {
 			this.activateNewTab(el);
 		} else {
 			el.click();
