@@ -14,7 +14,7 @@
 		"vimium",
 		"keyboard"
 	],
-	"author": "vimiumObs",
+	"author": "Stian Lyng",
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^20.11.0",

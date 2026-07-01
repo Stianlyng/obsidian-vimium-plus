@@ -11,5 +11,5 @@
 
 ## Plugin
 
-- [ ] Fix that this plugin only works on desktop
-- [ ] Change the name so it doesn't collide with the existing Vimium in the plugin marketplace
+- [x] Fix that this plugin only works on desktop
+- [x] Change the name so it doesn't collide with the existing Vimium in the plugin marketplace
