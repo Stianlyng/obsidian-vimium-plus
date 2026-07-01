@@ -212,6 +212,9 @@ export default class VimiumPlugin extends Plugin {
 			case "o":
 				this.app.commands.executeCommandById("switcher:open");
 				return true;
+			case "p":
+				this.app.commands.executeCommandById("command-palette:open");
+				return true;
 			default:
 				return false;
 		}
