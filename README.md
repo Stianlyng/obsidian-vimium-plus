@@ -5,6 +5,8 @@ A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 - **Reading mode** (the Vimium layer — the default): every note opens in Reading view. Scroll with `j`/`k`, jump around with `f` click-hints, and never touch the mouse.
 - **Editing mode**: press `i` to drop into the editor, where Obsidian's built-in **Vim** key bindings take over. **Double-press `Escape`** to come back to Reading mode.
 
+![Click hints shown over links, tabs, and the file tree after pressing `f`](assets/hints.png)
+
 ## Keybindings (Reading mode)
 
 | Key | Action |
