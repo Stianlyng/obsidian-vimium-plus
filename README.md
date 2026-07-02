@@ -1,4 +1,4 @@
-# Vimium for Obsidian
+# VimiumObs
 
 A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 
@@ -52,7 +52,7 @@ Copy (or symlink) `manifest.json`, `main.js`, and `styles.css` into:
 <your-vault>/.obsidian/plugins/vimium-obs/
 ```
 
-Then enable **Vimium for Obsidian** under Settings → Community plugins (turn on community plugins first if needed).
+Then enable **VimiumObs** under Settings → Community plugins (turn on community plugins first if needed).
 
 For active development, symlink the repo so each rebuild is picked up:
 

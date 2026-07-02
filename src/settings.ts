@@ -84,7 +84,6 @@ export class VimiumSettingTab extends PluginSettingTab {
 				slider
 					.setLimits(8, 24, 1)
 					.setValue(this.plugin.settings.hintFontSize)
-					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.hintFontSize = value;
 						await this.plugin.saveSettings();
@@ -98,7 +97,6 @@ export class VimiumSettingTab extends PluginSettingTab {
 				slider
 					.setLimits(20, 300, 10)
 					.setValue(this.plugin.settings.scrollStep)
-					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.scrollStep = value;
 						await this.plugin.saveSettings();
@@ -136,7 +134,6 @@ export class VimiumSettingTab extends PluginSettingTab {
 				slider
 					.setLimits(150, 800, 50)
 					.setValue(this.plugin.settings.doubleEscapeMs)
-					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.doubleEscapeMs = value;
 						await this.plugin.saveSettings();
@@ -170,8 +167,7 @@ export class VimiumSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 				text.inputEl.rows = 12;
-				text.inputEl.style.width = "100%";
-				text.inputEl.style.fontFamily = "var(--font-monospace, monospace)";
+				text.inputEl.addClass("vimium-selectors-input");
 			});
 	}
 }

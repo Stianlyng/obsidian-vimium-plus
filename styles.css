@@ -39,6 +39,12 @@
 	display: none;
 }
 
+/* The hint-target-selectors textarea in the settings tab. */
+.vimium-selectors-input {
+	width: 100%;
+	font-family: var(--font-monospace, monospace);
+}
+
 /* Small status pill shown while a mode is active. */
 .vimium-mode-indicator {
 	position: fixed;

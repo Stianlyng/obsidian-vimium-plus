@@ -45,7 +45,7 @@ export class Scroller {
 
 	private getScroller(): HTMLElement | null {
 		const leaf = this.app.workspace.getMostRecentLeaf();
-		const root = leaf?.view?.containerEl ?? document.body;
+		const root = leaf?.view?.containerEl ?? activeDocument.body;
 		const selectors = [".markdown-preview-view", ".cm-scroller", ".view-content"];
 		for (const sel of selectors) {
 			const el = root.querySelector<HTMLElement>(sel);

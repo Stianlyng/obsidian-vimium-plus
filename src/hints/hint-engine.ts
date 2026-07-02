@@ -42,7 +42,7 @@ export class HintEngine {
 
 		const labels = generateHintStrings(targets.length, this.settings.hintChars);
 
-		const container = document.body.createDiv({ cls: "vimium-hint-container" });
+		const container = activeDocument.body.createDiv({ cls: "vimium-hint-container" });
 		container.style.setProperty(
 			"--vimium-hint-font-size",
 			`${this.settings.hintFontSize}px`
@@ -159,7 +159,7 @@ export class HintEngine {
 
 		if (isInternal && linktext) {
 			const sourcePath = this.app.workspace.getActiveFile()?.path ?? "";
-			this.app.workspace.openLinkText(linktext, sourcePath, true);
+			void this.app.workspace.openLinkText(linktext, sourcePath, true);
 			return;
 		}
 
@@ -168,7 +168,7 @@ export class HintEngine {
 			new MouseEvent("click", {
 				bubbles: true,
 				cancelable: true,
-				view: window,
+				view: activeWindow,
 				ctrlKey: true,
 				metaKey: true,
 			})
@@ -182,13 +182,13 @@ export class HintEngine {
 		for (const selector of this.settings.selectors) {
 			let matches: NodeListOf<Element>;
 			try {
-				matches = document.querySelectorAll(selector);
+				matches = activeDocument.querySelectorAll(selector);
 			} catch {
 				// Skip invalid selectors rather than aborting the whole pass.
 				continue;
 			}
 			matches.forEach((node) => {
-				if (!(node instanceof HTMLElement)) return;
+				if (!node.instanceOf(HTMLElement)) return;
 				if (seen.has(node)) return;
 				if (!isVisible(node)) return;
 				seen.add(node);
@@ -206,12 +206,12 @@ function isVisible(el: HTMLElement): boolean {
 	if (
 		rect.bottom < 0 ||
 		rect.right < 0 ||
-		rect.top > window.innerHeight ||
-		rect.left > window.innerWidth
+		rect.top > activeWindow.innerHeight ||
+		rect.left > activeWindow.innerWidth
 	) {
 		return false;
 	}
-	const style = window.getComputedStyle(el);
+	const style = activeWindow.getComputedStyle(el);
 	if (
 		style.visibility === "hidden" ||
 		style.display === "none" ||

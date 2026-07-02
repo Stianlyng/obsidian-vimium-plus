@@ -40,7 +40,7 @@ export default class VimiumPlugin extends Plugin {
 
 		// Capture-phase so we intercept before CodeMirror / Obsidian handlers.
 		this.registerDomEvent(
-			document,
+			activeDocument,
 			"keydown",
 			(e) => this.onKeyDown(e),
 			{ capture: true }
@@ -75,7 +75,8 @@ export default class VimiumPlugin extends Plugin {
 	// ---- settings -----------------------------------------------------------
 
 	async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data = (await this.loadData()) as Partial<VimiumSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
 	}
 
 	async saveSettings(): Promise<void> {
@@ -245,7 +246,7 @@ export default class VimiumPlugin extends Plugin {
 			return;
 		}
 		if (!this.indicatorEl) {
-			this.indicatorEl = document.body.createDiv({
+			this.indicatorEl = activeDocument.body.createDiv({
 				cls: "vimium-mode-indicator",
 			});
 		}
@@ -261,7 +262,7 @@ function hasModifier(e: KeyboardEvent): boolean {
 
 /** True when focus is in a text field where our keys must not be hijacked. */
 function isEditableTarget(): boolean {
-	const el = document.activeElement as HTMLElement | null;
+	const el = activeDocument.activeElement as HTMLElement | null;
 	if (!el) return false;
 	const tag = el.tagName;
 	if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;

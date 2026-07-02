@@ -49,7 +49,7 @@ export class ModeManager {
 		if (view) {
 			await this.setLeafMode(view.leaf, "preview");
 			// Move focus off the (now hidden) editor so global keys are captured.
-			(document.activeElement as HTMLElement | null)?.blur?.();
+			(activeDocument.activeElement as HTMLElement | null)?.blur?.();
 		}
 	}
 
