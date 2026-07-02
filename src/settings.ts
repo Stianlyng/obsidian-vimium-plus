@@ -110,7 +110,9 @@ export class VimiumSettingTab extends PluginSettingTab {
 				text
 					.setValue(this.plugin.settings.hintChars)
 					.onChange(async (value) => {
-						const cleaned = value.toLowerCase().replace(/[^a-z]/g, "");
+						const cleaned = [
+							...new Set(value.toLowerCase().replace(/[^a-z]/g, "")),
+						].join("");
 						this.plugin.settings.hintChars = cleaned || DEFAULT_SETTINGS.hintChars;
 						await this.plugin.saveSettings();
 					})

@@ -6,7 +6,11 @@
  * one-key hints.
  */
 export function generateHintStrings(count: number, chars: string): string[] {
-	const alphabet = chars.length > 0 ? chars.split("") : ["s", "a", "d", "f"];
+	// Duplicate characters break the prefix-free property (a repeated char
+	// yields both a bare label and longer labels starting with it), and a
+	// single-char alphabet can never be prefix-free.
+	const unique = [...new Set(chars.split(""))];
+	const alphabet = unique.length > 1 ? unique : ["s", "a", "d", "f"];
 
 	if (count <= 0) return [];
 
