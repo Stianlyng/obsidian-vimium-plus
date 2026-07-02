@@ -60,6 +60,12 @@
 	font-family: var(--font-monospace, monospace);
 }
 
+/* The shell-command template field in a terminal command row. */
+.vimium-terminal-row .vimium-terminal-command {
+	width: 24em;
+	font-family: var(--font-monospace, monospace);
+}
+
 /* Small status pill shown while a mode is active. */
 .vimium-mode-indicator {
 	position: fixed;

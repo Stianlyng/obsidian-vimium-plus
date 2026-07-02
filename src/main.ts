@@ -12,6 +12,7 @@ import {
 	collectBookmarkItems,
 	collectRecentFileItems,
 } from "./omnibar";
+import { runTerminalCommand } from "./exec";
 
 export default class VimiumPlugin extends Plugin {
 	settings!: VimiumSettings;
@@ -243,7 +244,7 @@ export default class VimiumPlugin extends Plugin {
 		return this.runBuiltinKey(key);
 	}
 
-	/** Every multi-key-capable target: custom bindings first, then `gg`. */
+	/** Every multi-key-capable target: custom bindings and terminal commands first, then `gg`. */
 	private sequenceTargets(): { seq: string; run: () => void }[] {
 		const targets: { seq: string; run: () => void }[] = this.settings.keyBindings
 			.filter((b) => b.key.length > 0 && b.commandId)
@@ -251,6 +252,14 @@ export default class VimiumPlugin extends Plugin {
 				seq: b.key,
 				run: () => void this.app.commands.executeCommandById(b.commandId),
 			}));
+		for (const cmd of this.settings.terminalCommands) {
+			if (cmd.key.length > 0 && cmd.command) {
+				targets.push({
+					seq: cmd.key,
+					run: () => runTerminalCommand(this.app, cmd.command),
+				});
+			}
+		}
 		targets.push({ seq: "gg", run: () => this.scroller.toTop() });
 		return targets;
 	}
