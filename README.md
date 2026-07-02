@@ -1,4 +1,4 @@
-# VimiumObs
+# Vimium+
 
 A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 
@@ -6,6 +6,8 @@ A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 - **Editing mode**: press `i` to drop into the editor, where Obsidian's built-in **Vim** key bindings take over. **Double-press `Escape`** to come back to Reading mode.
 
 ![Click hints shown over links, tabs, and the file tree after pressing `f`](assets/hints.png)
+
+> Not affiliated with the [Vimium](https://github.com/philc/vimium) browser extension or the existing Vimium community plugin — this is an independent reimplementation of the Vimium idea for Obsidian.
 
 ## Keybindings (Reading mode)
 
@@ -26,7 +28,7 @@ A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 | `i` | Enter editing mode (focus the editor; native Vim active). |
 | `Esc` `Esc` | (In editing mode) return to Reading mode. |
 
-Any key — or a multi-key sequence like `gT` — can be bound to any command-palette command under **Settings → VimiumObs → Custom key bindings**. Type the keys as plain text; each character is one keypress. Two bindings ship by default: `o` (quick switcher) and `p` (command palette) — remap or remove them as you like. Custom bindings take priority over the built-in keys above; the settings dialog asks for confirmation before you shadow a built-in (or start a sequence with one, which delays it by the chord timeout).
+Any key — or a multi-key sequence like `gT` — can be bound to any command-palette command under **Settings → Vimium+ → Custom key bindings**. Type the keys as plain text; each character is one keypress. Two bindings ship by default: `o` (quick switcher) and `p` (command palette) — remap or remove them as you like. Custom bindings take priority over the built-in keys above; the settings dialog asks for confirmation before you shadow a built-in (or start a sequence with one, which delays it by the chord timeout).
 
 While hints are showing: type the label to activate, `Backspace` to correct, `Esc` to cancel. Holding `Shift` on the **last** letter of a label opens that target in a new tab (even if you started with plain `f`).
 
@@ -55,15 +57,15 @@ npm run build    # type-check + production bundle
 Copy (or symlink) `manifest.json`, `main.js`, and `styles.css` into:
 
 ```
-<your-vault>/.obsidian/plugins/vimium-obs/
+<your-vault>/.obsidian/plugins/vimium-plus/
 ```
 
-Then enable **VimiumObs** under Settings → Community plugins (turn on community plugins first if needed).
+Then enable **Vimium+** under Settings → Community plugins (turn on community plugins first if needed).
 
 For active development, symlink the repo so each rebuild is picked up:
 
 ```bash
-ln -s "$(pwd)" "<your-vault>/.obsidian/plugins/vimium-obs"
+ln -s "$(pwd)" "<your-vault>/.obsidian/plugins/vimium-plus"
 ```
 
 …and reload Obsidian (or use the Hot-Reload plugin) after each build.

@@ -1,5 +1,5 @@
 {
-	"name": "vimium-obs",
+	"name": "vimium-plus",
 	"version": "0.1.0",
 	"description": "Vimium-style keyboard navigation for Obsidian.",
 	"main": "main.js",
