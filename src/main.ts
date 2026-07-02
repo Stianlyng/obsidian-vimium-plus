@@ -7,6 +7,11 @@ import {
 import { ModeManager } from "./mode";
 import { HintEngine } from "./hints/hint-engine";
 import { Scroller } from "./scroll";
+import {
+	OmniOpenModal,
+	collectBookmarkItems,
+	collectRecentFileItems,
+} from "./omnibar";
 
 export default class VimiumPlugin extends Plugin {
 	settings!: VimiumSettings;
@@ -179,15 +184,6 @@ export default class VimiumPlugin extends Plugin {
 		// Any other key cancels a half-typed `g`.
 		this.clearPendingG();
 
-		// User-defined bindings win over the built-in keys below.
-		const binding = this.settings.keyBindings.find(
-			(b) => b.key === key && b.commandId
-		);
-		if (binding) {
-			this.app.commands.executeCommandById(binding.commandId);
-			return true;
-		}
-
 		switch (key) {
 			case "f":
 				this.hintEngine.show(false);
@@ -219,15 +215,64 @@ export default class VimiumPlugin extends Plugin {
 			case "i":
 				void this.modeManager.enterEditing();
 				return true;
-			case "o":
-				this.app.commands.executeCommandById("switcher:open");
+			case "b":
+				this.openBookmarkSearch(false);
 				return true;
-			case "p":
-				this.app.commands.executeCommandById("command-palette:open");
+			case "B":
+				this.openBookmarkSearch(true);
 				return true;
-			default:
-				return false;
+			case "O":
+				this.openOmnibar();
+				return true;
+			case "/":
+				this.app.commands.executeCommandById("editor:open-search");
+				return true;
+			case "t":
+				this.app.commands.executeCommandById("workspace:new-tab");
+				return true;
+			case "x":
+				this.app.commands.executeCommandById("workspace:close");
+				return true;
+			case "X":
+				this.app.commands.executeCommandById("workspace:undo-close-pane");
+				return true;
+			case "H":
+				this.app.commands.executeCommandById("app:go-back");
+				return true;
+			case "L":
+				this.app.commands.executeCommandById("app:go-forward");
+				return true;
 		}
+
+		// User-defined bindings handle everything the built-in keys above
+		// don't claim; the built-ins themselves are not remappable.
+		const binding = this.settings.keyBindings.find(
+			(b) => b.key === key && b.commandId
+		);
+		if (binding) {
+			this.app.commands.executeCommandById(binding.commandId);
+			return true;
+		}
+		return false;
+	}
+
+	private openBookmarkSearch(newTab: boolean): void {
+		new OmniOpenModal(
+			this.app,
+			collectBookmarkItems(this.app),
+			newTab,
+			false
+		).open();
+	}
+
+	/** `O`: bookmarks + recent files + raw URLs, opening in a new tab. */
+	private openOmnibar(): void {
+		const items = collectBookmarkItems(this.app);
+		const seen = new Set(items.map((i) => i.detail));
+		for (const item of collectRecentFileItems(this.app)) {
+			if (!seen.has(item.detail)) items.push(item);
+		}
+		new OmniOpenModal(this.app, items, true, true).open();
 	}
 
 	private setPendingG(): void {

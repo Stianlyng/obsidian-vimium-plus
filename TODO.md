@@ -2,11 +2,11 @@
 
 ## Keybindings
 
-- [ ] `b` — open the bookmark search dialog
-- [ ] `B` — open bookmark search in a new tab
-- [ ] `O` — open URL, bookmark, or history entry in a new tab
-- [ ] `H` — go back in history
-- [ ] `L` — go forward in history
+- [x] `b` — open the bookmark search dialog
+- [x] `B` — open bookmark search in a new tab
+- [x] `O` — open URL, bookmark, or history entry in a new tab
+- [x] `H` — go back in history
+- [x] `L` — go forward in history
 
 ## Plugin
 

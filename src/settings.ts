@@ -68,7 +68,18 @@ export const DEFAULT_SETTINGS: VimiumSettings = {
 	enableNativeVim: true,
 	doubleEscapeMs: 400,
 	showModeIndicator: true,
-	keyBindings: [],
+	keyBindings: [
+		{
+			key: "p",
+			commandId: "command-palette:open",
+			commandName: "Command palette: Open command palette",
+		},
+		{
+			key: "o",
+			commandId: "switcher:open",
+			commandName: "Quick switcher: Open quick switcher",
+		},
+	],
 };
 
 /** Fuzzy picker over every command in the command palette. */
@@ -217,7 +228,7 @@ export class VimiumSettingTab extends PluginSettingTab {
 	private displayKeyBindings(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Custom key bindings").setHeading();
 		containerEl.createEl("p", {
-			text: "Bind a key to any command from the command palette. Active in reading mode; overrides the built-in keys.",
+			text: "Bind a key to any command from the command palette. Active in reading mode. The built-in keys (f, j, k, b, gg, …) always win and can't be remapped.",
 			cls: "setting-item-description",
 		});
 

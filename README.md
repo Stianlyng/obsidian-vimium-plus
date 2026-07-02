@@ -17,10 +17,16 @@ A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 | `d` / `u` | Scroll a half-page down / up. |
 | `g g` / `Shift`+`G` | Jump to top / bottom. |
 | `Shift`+`J` / `Shift`+`K` | Switch to the next / previous tab. |
-| `o` | Open the quick switcher (jump to another note). |
-| `p` | Open the command palette. |
+| `b` / `Shift`+`B` | Fuzzy-search your bookmarks; open the pick in the current / a new tab. |
+| `Shift`+`O` | Omnibar: open a bookmark, recent file, or typed URL in a new tab. |
+| `Shift`+`H` / `Shift`+`L` | Go back / forward in history. |
+| `/` | Search the current file. |
+| `t` | Open a new tab. |
+| `x` / `Shift`+`X` | Close the current tab / restore closed tabs. |
 | `i` | Enter editing mode (focus the editor; native Vim active). |
 | `Esc` `Esc` | (In editing mode) return to Reading mode. |
+
+Keys not claimed by the table above can be bound to any command-palette command under **Settings → VimiumObs → Custom key bindings**. Two bindings ship by default: `o` (quick switcher) and `p` (command palette) — remap or remove them as you like. The built-in keys always win over custom bindings.
 
 While hints are showing: type the label to activate, `Backspace` to correct, `Esc` to cancel. Holding `Shift` on the **last** letter of a label opens that target in a new tab (even if you started with plain `f`).
 
