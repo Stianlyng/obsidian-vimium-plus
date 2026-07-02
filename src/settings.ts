@@ -2,10 +2,35 @@ import {
 	App,
 	Command,
 	FuzzySuggestModal,
+	Modal,
 	PluginSettingTab,
 	Setting,
 } from "obsidian";
 import type VimiumPlugin from "./main";
+
+/** Built-in reading-mode keys and what they do; used to warn before a custom binding shadows one. */
+export const BUILTIN_KEYS: Record<string, string> = {
+	f: "show click hints",
+	F: "show click hints in a new tab",
+	j: "scroll down",
+	k: "scroll up",
+	J: "next tab",
+	K: "previous tab",
+	d: "half-page down",
+	u: "half-page up",
+	g: "jump to top (gg)",
+	G: "jump to bottom",
+	i: "enter editing mode",
+	b: "bookmark search",
+	B: "bookmark search in a new tab",
+	O: "omnibar in a new tab",
+	H: "go back in history",
+	L: "go forward in history",
+	"/": "search current file",
+	t: "new tab",
+	x: "close tab",
+	X: "restore closed tab",
+};
 
 /** A user-defined key that runs a command palette command in reading mode. */
 export interface KeyBinding {
@@ -81,6 +106,45 @@ export const DEFAULT_SETTINGS: VimiumSettings = {
 		},
 	],
 };
+
+/** Asks the user to confirm shadowing a built-in key with a custom binding. */
+class ConfirmOverrideModal extends Modal {
+	private confirmed = false;
+
+	constructor(
+		app: App,
+		private key: string,
+		private action: string,
+		private onResult: (confirmed: boolean) => void
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		this.titleEl.setText("Override built-in key?");
+		this.contentEl.createEl("p", {
+			text: `"${this.key}" is a built-in key (${this.action}). Binding a command to it will override the built-in action in reading mode.`,
+		});
+		new Setting(this.contentEl)
+			.addButton((button) =>
+				button
+					.setButtonText("Override")
+					.setWarning()
+					.onClick(() => {
+						this.confirmed = true;
+						this.close();
+					})
+			)
+			.addButton((button) =>
+				button.setButtonText("Cancel").onClick(() => this.close())
+			);
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+		this.onResult(this.confirmed);
+	}
+}
 
 /** Fuzzy picker over every command in the command palette. */
 class CommandSuggestModal extends FuzzySuggestModal<Command> {
@@ -228,7 +292,7 @@ export class VimiumSettingTab extends PluginSettingTab {
 	private displayKeyBindings(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Custom key bindings").setHeading();
 		containerEl.createEl("p", {
-			text: "Bind a key to any command from the command palette. Active in reading mode. The built-in keys (f, j, k, b, gg, …) always win and can't be remapped.",
+			text: "Bind a key to any command from the command palette. Active in reading mode. Custom bindings override the built-in keys (you'll be asked to confirm).",
 			cls: "setting-item-description",
 		});
 
@@ -245,9 +309,20 @@ export class VimiumSettingTab extends PluginSettingTab {
 				text.inputEl.addEventListener("keydown", (e) => {
 					if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
 					e.preventDefault();
-					binding.key = e.key === "Backspace" ? "" : e.key;
-					text.setValue(binding.key);
-					void this.plugin.saveSettings();
+					const newKey = e.key === "Backspace" ? "" : e.key;
+					const apply = () => {
+						binding.key = newKey;
+						text.setValue(newKey);
+						void this.plugin.saveSettings();
+					};
+					const builtin = newKey ? BUILTIN_KEYS[newKey] : undefined;
+					if (builtin) {
+						new ConfirmOverrideModal(this.app, newKey, builtin, (ok) => {
+							if (ok) apply();
+						}).open();
+					} else {
+						apply();
+					}
 				});
 			});
 

@@ -171,6 +171,17 @@ export default class VimiumPlugin extends Plugin {
 	private handleReadingKey(e: KeyboardEvent): boolean {
 		const key = e.key;
 
+		// Custom bindings run first so any built-in key (even `g`) can be
+		// remapped; the settings UI warns before a built-in is shadowed.
+		const binding = this.settings.keyBindings.find(
+			(b) => b.key === key && b.commandId
+		);
+		if (binding) {
+			this.clearPendingG();
+			this.app.commands.executeCommandById(binding.commandId);
+			return true;
+		}
+
 		// `gg` → top. Track a pending leading `g`.
 		if (key === "g" && !e.shiftKey) {
 			if (this.pendingG) {
@@ -244,15 +255,6 @@ export default class VimiumPlugin extends Plugin {
 				return true;
 		}
 
-		// User-defined bindings handle everything the built-in keys above
-		// don't claim; the built-ins themselves are not remappable.
-		const binding = this.settings.keyBindings.find(
-			(b) => b.key === key && b.commandId
-		);
-		if (binding) {
-			this.app.commands.executeCommandById(binding.commandId);
-			return true;
-		}
 		return false;
 	}
 
