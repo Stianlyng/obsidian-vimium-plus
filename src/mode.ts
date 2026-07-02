@@ -69,6 +69,21 @@ export class ModeManager {
 		return false;
 	}
 
+	/**
+	 * Re-derive the mode from the active markdown view's actual state, so
+	 * external view-mode toggles (pencil icon, Ctrl+E) can't leave us stale.
+	 */
+	syncFromView(): void {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view) return;
+		const actual: Mode = view.getMode() === "preview" ? "reading" : "editing";
+		if (actual !== this._mode) {
+			this._mode = actual;
+			this.lastEscape = 0;
+			this.onChange();
+		}
+	}
+
 	/** Force the given markdown leaf into Reading view, if not already. */
 	async forceReading(leaf: WorkspaceLeaf | null): Promise<void> {
 		if (!this.settings.forceReadingView) return;

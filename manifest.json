@@ -3,7 +3,7 @@
 	"name": "VimiumObs",
 	"version": "0.1.0",
 	"minAppVersion": "1.4.0",
-	"description": "Vimium-style keyboard navigation: f for click hints, j/k/d/u scrolling, J/K tab switching, and i to drop into the editor's native Vim mode.",
+	"description": "Navigate with Vimium-style keys: f for click hints, j/k/d/u scrolling, J/K tab switching, and i to drop into the editor's native Vim mode.",
 	"author": "Stian Lyng",
 	"isDesktopOnly": true
 }

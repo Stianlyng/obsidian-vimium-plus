@@ -3,6 +3,7 @@ import {
 	Command,
 	FuzzySuggestModal,
 	Modal,
+	Notice,
 	PluginSettingTab,
 	Setting,
 } from "obsidian";
@@ -180,7 +181,7 @@ export class VimiumSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Hint characters")
 			.setDesc("Characters used to generate hint labels, in priority order.")
-			.addText((text) =>
+			.addText((text) => {
 				text
 					.setValue(this.plugin.settings.hintChars)
 					.onChange(async (value) => {
@@ -189,8 +190,13 @@ export class VimiumSettingTab extends PluginSettingTab {
 						].join("");
 						this.plugin.settings.hintChars = cleaned || DEFAULT_SETTINGS.hintChars;
 						await this.plugin.saveSettings();
-					})
-			);
+					});
+				// Show what was actually saved (deduped/lowercased, or the
+				// default if the field was emptied).
+				text.inputEl.addEventListener("blur", () => {
+					text.setValue(this.plugin.settings.hintChars);
+				});
+			});
 
 		new Setting(containerEl)
 			.setName("Hint font size")
@@ -220,25 +226,27 @@ export class VimiumSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Force Reading view")
-			.setDesc("Open every note in Reading view so the Vimium layer is always active by default.")
+			.setDesc("Open every note in Reading view so the Vimium layer is always active by default. Changes the editor's global default view mode; the previous value is restored when this is turned off or the plugin is disabled.")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.forceReadingView)
 					.onChange(async (value) => {
 						this.plugin.settings.forceReadingView = value;
 						await this.plugin.saveSettings();
+						this.plugin.applyForceReadingView(value);
 					})
 			);
 
 		new Setting(containerEl)
-			.setName("Enable native Vim on load")
-			.setDesc("Turn on Obsidian's built-in Vim key bindings so 'i' drops you into a Vim editor.")
+			.setName("Enable native Vim")
+			.setDesc("Turn on Obsidian's built-in Vim key bindings so 'i' drops you into a Vim editor. Changes the editor's global Vim setting; the previous value is restored when this is turned off or the plugin is disabled.")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.enableNativeVim)
 					.onChange(async (value) => {
 						this.plugin.settings.enableNativeVim = value;
 						await this.plugin.saveSettings();
+						this.plugin.applyNativeVim(value);
 					})
 			);
 
@@ -307,6 +315,14 @@ export class VimiumSettingTab extends PluginSettingTab {
 				const commit = (): void => {
 					const newKey = text.inputEl.value.trim();
 					if (newKey === binding.key) return;
+					const duplicate = this.plugin.settings.keyBindings.some(
+						(other) => other !== binding && other.key === newKey
+					);
+					if (newKey && duplicate) {
+						new Notice(`"${newKey}" is already bound to another command.`);
+						text.setValue(binding.key);
+						return;
+					}
 					const apply = (): void => {
 						binding.key = newKey;
 						void this.plugin.saveSettings();

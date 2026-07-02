@@ -3,6 +3,9 @@ node_modules/
 main.js
 *.js.map
 
+# vault-written plugin settings (repo doubles as the plugin folder)
+data.json
+
 # editors / os
 .DS_Store
 *.log

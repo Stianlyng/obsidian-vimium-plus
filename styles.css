@@ -9,28 +9,30 @@
 	z-index: var(--layer-popover, 30);
 }
 
-/* A single hint label sitting at the top-left of its target element. */
+/* A single hint label sitting at the top-left of its target element.
+   The Vimium-yellow defaults are exposed as custom properties so themes and
+   snippets can restyle the markers. */
 .vimium-hint-marker {
 	position: fixed;
 	display: inline-block;
 	padding: 0 3px;
-	border: 1px solid #c08a00;
+	border: 1px solid var(--vimium-hint-border, #c08a00);
 	border-radius: 3px;
-	background: linear-gradient(#fff785, #ffc542);
-	color: #302505;
+	background: var(--vimium-hint-bg, linear-gradient(#fff785, #ffc542));
+	color: var(--vimium-hint-fg, #302505);
 	font-family: var(--font-monospace, monospace);
 	font-size: var(--vimium-hint-font-size, 11px);
 	font-weight: 700;
 	line-height: 1.4;
 	text-transform: uppercase;
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+	box-shadow: var(--shadow-s, 0 2px 4px rgba(0, 0, 0, 0.3));
 	white-space: nowrap;
 	pointer-events: none;
 }
 
 /* The portion of a hint the user has already typed. */
 .vimium-hint-marker .vimium-hint-typed {
-	color: #d4a017;
+	color: var(--vimium-hint-typed-fg, #d4a017);
 	opacity: 0.55;
 }
 
@@ -67,7 +69,7 @@
 	border-radius: 4px;
 	background: var(--background-secondary-alt);
 	color: var(--text-muted);
-	font-size: 11px;
+	font-size: var(--font-ui-smaller, 11px);
 	font-family: var(--font-monospace, monospace);
 	z-index: var(--layer-popover, 30);
 	pointer-events: none;

@@ -1,4 +1,4 @@
-import { App } from "obsidian";
+import { App, Platform } from "obsidian";
 import { VimiumSettings } from "../settings";
 import { generateHintStrings } from "./labels";
 
@@ -169,8 +169,8 @@ export class HintEngine {
 				bubbles: true,
 				cancelable: true,
 				view: activeWindow,
-				ctrlKey: true,
-				metaKey: true,
+				ctrlKey: !Platform.isMacOS,
+				metaKey: Platform.isMacOS,
 			})
 		);
 	}

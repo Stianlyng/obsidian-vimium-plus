@@ -25,9 +25,13 @@ export default class VimiumPlugin extends Plugin {
 	private pendingKeys = "";
 	private pendingTimer: number | null = null;
 
-	// Editor config we override and must restore on unload.
-	private prevVimMode: unknown = undefined;
-	private prevDefaultViewMode: unknown = undefined;
+	// Editor config we override and must restore on unload. Tracked with
+	// explicit "did we change it" flags: the previous value may legitimately be
+	// undefined (config key never set), so it can't double as the flag.
+	private vimModeChanged = false;
+	private prevVimMode: unknown = false;
+	private viewModeChanged = false;
+	private prevDefaultViewMode: unknown = "source";
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -45,18 +49,26 @@ export default class VimiumPlugin extends Plugin {
 		this.addSettingTab(new VimiumSettingTab(this.app, this));
 
 		// Capture-phase so we intercept before CodeMirror / Obsidian handlers.
-		this.registerDomEvent(
-			activeDocument,
-			"keydown",
-			(e) => this.onKeyDown(e),
-			{ capture: true }
+		// Bound per window so pop-out windows work too.
+		this.bindWindow(activeDocument);
+		this.registerEvent(
+			this.app.workspace.on("window-open", (win) => this.bindWindow(win.doc))
 		);
 
 		// Keep newly-activated notes in Reading view while in reading mode.
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
-				void this.modeManager.forceReading(leaf);
+				void this.modeManager
+					.forceReading(leaf)
+					.then(() => this.modeManager.syncFromView());
 			})
+		);
+		// External view-mode toggles (pencil icon, Ctrl+E) must not leave the
+		// mode state stale.
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () =>
+				this.modeManager.syncFromView()
+			)
 		);
 		this.registerEvent(
 			this.app.workspace.on("file-open", () => {
@@ -91,25 +103,48 @@ export default class VimiumPlugin extends Plugin {
 	}
 
 	private applyEditorConfig(): void {
-		const vault = this.app.vault;
-		if (this.settings.enableNativeVim) {
-			this.prevVimMode = vault.getConfig("vimMode");
-			vault.setConfig("vimMode", true);
-		}
-		if (this.settings.forceReadingView) {
-			this.prevDefaultViewMode = vault.getConfig("defaultViewMode");
-			vault.setConfig("defaultViewMode", "preview");
-		}
+		if (this.settings.enableNativeVim) this.applyNativeVim(true);
+		if (this.settings.forceReadingView) this.applyForceReadingView(true);
 	}
 
 	private restoreEditorConfig(): void {
+		this.applyNativeVim(false);
+		this.applyForceReadingView(false);
+	}
+
+	/** Turn the editor's global Vim setting on, or restore what it was. */
+	applyNativeVim(enabled: boolean): void {
 		const vault = this.app.vault;
-		if (this.prevVimMode !== undefined) {
+		if (enabled) {
+			if (this.vimModeChanged) return;
+			this.prevVimMode = vault.getConfig("vimMode") ?? false;
+			this.vimModeChanged = true;
+			vault.setConfig("vimMode", true);
+		} else if (this.vimModeChanged) {
+			this.vimModeChanged = false;
 			vault.setConfig("vimMode", this.prevVimMode);
 		}
-		if (this.prevDefaultViewMode !== undefined) {
+	}
+
+	/** Set the default view mode to Reading view, or restore what it was. */
+	applyForceReadingView(enabled: boolean): void {
+		const vault = this.app.vault;
+		if (enabled) {
+			if (this.viewModeChanged) return;
+			this.prevDefaultViewMode =
+				vault.getConfig("defaultViewMode") ?? "source";
+			this.viewModeChanged = true;
+			vault.setConfig("defaultViewMode", "preview");
+		} else if (this.viewModeChanged) {
+			this.viewModeChanged = false;
 			vault.setConfig("defaultViewMode", this.prevDefaultViewMode);
 		}
+	}
+
+	private bindWindow(doc: Document): void {
+		this.registerDomEvent(doc, "keydown", (e) => this.onKeyDown(e), {
+			capture: true,
+		});
 	}
 
 	// ---- commands -----------------------------------------------------------
@@ -337,7 +372,10 @@ export default class VimiumPlugin extends Plugin {
 			this.indicatorEl = null;
 			return;
 		}
-		if (!this.indicatorEl) {
+		// Recreate the pill in whichever window is focused so it follows the
+		// user into pop-out windows.
+		if (!this.indicatorEl || this.indicatorEl.ownerDocument !== activeDocument) {
+			this.indicatorEl?.remove();
 			this.indicatorEl = activeDocument.body.createDiv({
 				cls: "vimium-mode-indicator",
 			});
