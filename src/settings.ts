@@ -107,28 +107,27 @@ export const DEFAULT_SETTINGS: VimiumSettings = {
 	],
 };
 
-/** Asks the user to confirm shadowing a built-in key with a custom binding. */
-class ConfirmOverrideModal extends Modal {
+/** Asks the user to confirm a binding that shadows or delays a built-in key. */
+class ConfirmKeyModal extends Modal {
 	private confirmed = false;
 
 	constructor(
 		app: App,
-		private key: string,
-		private action: string,
+		private heading: string,
+		private message: string,
+		private confirmLabel: string,
 		private onResult: (confirmed: boolean) => void
 	) {
 		super(app);
 	}
 
 	onOpen(): void {
-		this.titleEl.setText("Override built-in key?");
-		this.contentEl.createEl("p", {
-			text: `"${this.key}" is a built-in key (${this.action}). Binding a command to it will override the built-in action in reading mode.`,
-		});
+		this.titleEl.setText(this.heading);
+		this.contentEl.createEl("p", { text: this.message });
 		new Setting(this.contentEl)
 			.addButton((button) =>
 				button
-					.setButtonText("Override")
+					.setButtonText(this.confirmLabel)
 					.setWarning()
 					.onClick(() => {
 						this.confirmed = true;
@@ -292,7 +291,7 @@ export class VimiumSettingTab extends PluginSettingTab {
 	private displayKeyBindings(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Custom key bindings").setHeading();
 		containerEl.createEl("p", {
-			text: "Bind a key to any command from the command palette. Active in reading mode. Custom bindings override the built-in keys (you'll be asked to confirm).",
+			text: "Bind a key — or a sequence like gT — to any command from the command palette. Active in reading mode. Custom bindings override the built-in keys (you'll be asked to confirm).",
 			cls: "setting-item-description",
 		});
 
@@ -301,28 +300,46 @@ export class VimiumSettingTab extends PluginSettingTab {
 			row.settingEl.addClass("vimium-keybinding-row");
 
 			row.addText((text) => {
-				text.setPlaceholder("Key").setValue(binding.key);
+				text.setPlaceholder("Key(s)").setValue(binding.key);
 				text.inputEl.addClass("vimium-keybinding-key");
-				text.inputEl.readOnly = true;
-				// Capture the next key press instead of parsing typed text, so
-				// keys like "ArrowDown" or shifted characters work naturally.
-				text.inputEl.addEventListener("keydown", (e) => {
-					if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
-					e.preventDefault();
-					const newKey = e.key === "Backspace" ? "" : e.key;
-					const apply = () => {
+				// Committed on blur/Enter, not per keystroke, so a sequence like
+				// "gT" is validated as a whole.
+				const commit = (): void => {
+					const newKey = text.inputEl.value.trim();
+					if (newKey === binding.key) return;
+					const apply = (): void => {
 						binding.key = newKey;
-						text.setValue(newKey);
 						void this.plugin.saveSettings();
 					};
-					const builtin = newKey ? BUILTIN_KEYS[newKey] : undefined;
-					if (builtin) {
-						new ConfirmOverrideModal(this.app, newKey, builtin, (ok) => {
-							if (ok) apply();
-						}).open();
+					const done = (ok: boolean): void => {
+						if (ok) apply();
+						else text.setValue(binding.key);
+					};
+					const first = newKey.charAt(0);
+					if ((newKey.length === 1 && BUILTIN_KEYS[newKey]) || newKey === "gg") {
+						const shadowed = newKey === "gg" ? "gg" : newKey;
+						new ConfirmKeyModal(
+							this.app,
+							"Override built-in key?",
+							`"${shadowed}" is a built-in key (${BUILTIN_KEYS[first]}). Binding a command to it will override the built-in action in reading mode.`,
+							"Override",
+							done
+						).open();
+					} else if (newKey.length > 1 && BUILTIN_KEYS[first]) {
+						new ConfirmKeyModal(
+							this.app,
+							"Delay built-in key?",
+							`This sequence starts with "${first}", a built-in key (${BUILTIN_KEYS[first]}). While the plugin waits for the rest of the sequence, the built-in action will only run after a short chord timeout.`,
+							"Bind anyway",
+							done
+						).open();
 					} else {
 						apply();
 					}
+				};
+				text.inputEl.addEventListener("change", commit);
+				text.inputEl.addEventListener("keydown", (e) => {
+					if (e.key === "Enter") text.inputEl.blur();
 				});
 			});
 

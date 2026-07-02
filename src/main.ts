@@ -21,8 +21,9 @@ export default class VimiumPlugin extends Plugin {
 	private scroller!: Scroller;
 
 	private indicatorEl: HTMLElement | null = null;
-	private pendingG = false;
-	private pendingGTimer: number | null = null;
+	// Keys buffered while they are still a prefix of some key sequence.
+	private pendingKeys = "";
+	private pendingTimer: number | null = null;
 
 	// Editor config we override and must restore on unload.
 	private prevVimMode: unknown = undefined;
@@ -74,6 +75,7 @@ export default class VimiumPlugin extends Plugin {
 		this.hintEngine?.hide();
 		this.indicatorEl?.remove();
 		this.indicatorEl = null;
+		this.clearPending();
 		this.restoreEditorConfig();
 	}
 
@@ -169,32 +171,82 @@ export default class VimiumPlugin extends Plugin {
 	}
 
 	private handleReadingKey(e: KeyboardEvent): boolean {
-		const key = e.key;
+		// Pure modifier presses must not pollute the sequence buffer.
+		if (e.key === "Shift") return false;
+		return this.feedKey(e.key);
+	}
 
-		// Custom bindings run first so any built-in key (even `g`) can be
-		// remapped; the settings UI warns before a built-in is shadowed.
-		const binding = this.settings.keyBindings.find(
-			(b) => b.key === key && b.commandId
+	/**
+	 * Advance the key-sequence state machine with one key. Custom bindings
+	 * (which may be multi-key sequences like "gT") and the built-in `gg` chord
+	 * are matched longest-first; while the typed keys are still a prefix of
+	 * some sequence they are buffered until the chord timeout resolves the
+	 * ambiguity. Custom bindings win over built-ins on an equal match.
+	 */
+	private feedKey(key: string): boolean {
+		const hadPending = this.pendingKeys.length > 0;
+		const candidate = this.pendingKeys + key;
+		const targets = this.sequenceTargets();
+		const exact = targets.find((t) => t.seq === candidate);
+		const extendable = targets.some(
+			(t) => t.seq.length > candidate.length && t.seq.startsWith(candidate)
 		);
-		if (binding) {
-			this.clearPendingG();
-			this.app.commands.executeCommandById(binding.commandId);
+
+		if (extendable) {
+			this.setPending(candidate, exact);
 			return true;
 		}
+		this.clearPending();
+		if (exact) {
+			exact.run();
+			return true;
+		}
+		if (hadPending) {
+			// Dead-end chord: drop the buffered prefix, give this key a fresh start.
+			return this.feedKey(key);
+		}
+		return this.runBuiltinKey(key);
+	}
 
-		// `gg` → top. Track a pending leading `g`.
-		if (key === "g" && !e.shiftKey) {
-			if (this.pendingG) {
-				this.clearPendingG();
-				this.scroller.toTop();
-			} else {
-				this.setPendingG();
+	/** Every multi-key-capable target: custom bindings first, then `gg`. */
+	private sequenceTargets(): { seq: string; run: () => void }[] {
+		const targets: { seq: string; run: () => void }[] = this.settings.keyBindings
+			.filter((b) => b.key.length > 0 && b.commandId)
+			.map((b) => ({
+				seq: b.key,
+				run: () => void this.app.commands.executeCommandById(b.commandId),
+			}));
+		targets.push({ seq: "gg", run: () => this.scroller.toTop() });
+		return targets;
+	}
+
+	private setPending(candidate: string, exact?: { run: () => void }): void {
+		this.clearPending();
+		this.pendingKeys = candidate;
+		this.pendingTimer = window.setTimeout(() => {
+			this.pendingKeys = "";
+			this.pendingTimer = null;
+			// The sequence was never completed: fall back to what the buffered
+			// keys meant on their own (a shorter custom binding, or a built-in).
+			if (exact) {
+				exact.run();
+			} else if (candidate.length === 1) {
+				this.runBuiltinKey(candidate);
 			}
-			return true;
-		}
-		// Any other key cancels a half-typed `g`.
-		this.clearPendingG();
+		}, VimiumPlugin.CHORD_TIMEOUT_MS);
+	}
 
+	private clearPending(): void {
+		this.pendingKeys = "";
+		if (this.pendingTimer !== null) {
+			window.clearTimeout(this.pendingTimer);
+			this.pendingTimer = null;
+		}
+	}
+
+	private static readonly CHORD_TIMEOUT_MS = 600;
+
+	private runBuiltinKey(key: string): boolean {
 		switch (key) {
 			case "f":
 				this.hintEngine.show(false);
@@ -275,22 +327,6 @@ export default class VimiumPlugin extends Plugin {
 			if (!seen.has(item.detail)) items.push(item);
 		}
 		new OmniOpenModal(this.app, items, true, true).open();
-	}
-
-	private setPendingG(): void {
-		this.pendingG = true;
-		this.pendingGTimer = window.setTimeout(() => {
-			this.pendingG = false;
-			this.pendingGTimer = null;
-		}, 600);
-	}
-
-	private clearPendingG(): void {
-		this.pendingG = false;
-		if (this.pendingGTimer !== null) {
-			window.clearTimeout(this.pendingGTimer);
-			this.pendingGTimer = null;
-		}
 	}
 
 	// ---- mode indicator -----------------------------------------------------

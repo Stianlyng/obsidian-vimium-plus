@@ -51,12 +51,11 @@
 	font-size: var(--font-ui-smaller, 12px);
 }
 
-/* One row in the custom key bindings list: key capture field + command button. */
+/* One row in the custom key bindings list: key sequence field + command button. */
 .vimium-keybinding-row .vimium-keybinding-key {
 	width: 8em;
 	text-align: center;
 	font-family: var(--font-monospace, monospace);
-	cursor: pointer;
 }
 
 /* Small status pill shown while a mode is active. */

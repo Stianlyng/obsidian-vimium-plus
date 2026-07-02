@@ -26,7 +26,7 @@ A Vimium-FF–style keyboard layer for Obsidian. It gives you two modes:
 | `i` | Enter editing mode (focus the editor; native Vim active). |
 | `Esc` `Esc` | (In editing mode) return to Reading mode. |
 
-Any key can be bound to any command-palette command under **Settings → VimiumObs → Custom key bindings**. Two bindings ship by default: `o` (quick switcher) and `p` (command palette) — remap or remove them as you like. Custom bindings take priority over the built-in keys above; the settings dialog asks for confirmation before you shadow one.
+Any key — or a multi-key sequence like `gT` — can be bound to any command-palette command under **Settings → VimiumObs → Custom key bindings**. Type the keys as plain text; each character is one keypress. Two bindings ship by default: `o` (quick switcher) and `p` (command palette) — remap or remove them as you like. Custom bindings take priority over the built-in keys above; the settings dialog asks for confirmation before you shadow a built-in (or start a sequence with one, which delays it by the chord timeout).
 
 While hints are showing: type the label to activate, `Backspace` to correct, `Esc` to cancel. Holding `Shift` on the **last** letter of a label opens that target in a new tab (even if you started with plain `f`).
 
