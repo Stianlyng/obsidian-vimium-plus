@@ -4,7 +4,6 @@
 
 - [ ] `b` — open the bookmark search dialog
 - [ ] `B` — open bookmark search in a new tab
-- [ ] Key to open the master index note
 - [ ] `O` — open URL, bookmark, or history entry in a new tab
 - [ ] `H` — go back in history
 - [ ] `L` — go forward in history

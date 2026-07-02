@@ -179,6 +179,15 @@ export default class VimiumPlugin extends Plugin {
 		// Any other key cancels a half-typed `g`.
 		this.clearPendingG();
 
+		// User-defined bindings win over the built-in keys below.
+		const binding = this.settings.keyBindings.find(
+			(b) => b.key === key && b.commandId
+		);
+		if (binding) {
+			this.app.commands.executeCommandById(binding.commandId);
+			return true;
+		}
+
 		switch (key) {
 			case "f":
 				this.hintEngine.show(false);

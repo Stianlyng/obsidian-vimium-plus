@@ -1,5 +1,21 @@
-import { App, PluginSettingTab, Setting } from "obsidian";
+import {
+	App,
+	Command,
+	FuzzySuggestModal,
+	PluginSettingTab,
+	Setting,
+} from "obsidian";
 import type VimiumPlugin from "./main";
+
+/** A user-defined key that runs a command palette command in reading mode. */
+export interface KeyBinding {
+	/** KeyboardEvent.key value, e.g. "x", "X", "ArrowDown". Empty = unset. */
+	key: string;
+	/** Command id, e.g. "editor:toggle-bold". Empty = unset. */
+	commandId: string;
+	/** Command display name, kept so the row stays readable if the command's plugin is disabled. */
+	commandName: string;
+}
 
 export interface VimiumSettings {
 	/** Characters used to build hint labels (in priority order). */
@@ -18,6 +34,8 @@ export interface VimiumSettings {
 	doubleEscapeMs: number;
 	/** Show a small mode indicator pill. */
 	showModeIndicator: boolean;
+	/** Custom reading-mode key bindings. They override the built-in keys. */
+	keyBindings: KeyBinding[];
 }
 
 export const DEFAULT_SELECTORS = [
@@ -50,7 +68,28 @@ export const DEFAULT_SETTINGS: VimiumSettings = {
 	enableNativeVim: true,
 	doubleEscapeMs: 400,
 	showModeIndicator: true,
+	keyBindings: [],
 };
+
+/** Fuzzy picker over every command in the command palette. */
+class CommandSuggestModal extends FuzzySuggestModal<Command> {
+	constructor(app: App, private onChoose: (command: Command) => void) {
+		super(app);
+		this.setPlaceholder("Pick a command…");
+	}
+
+	getItems(): Command[] {
+		return this.app.commands.listCommands();
+	}
+
+	getItemText(command: Command): string {
+		return command.name;
+	}
+
+	onChooseItem(command: Command): void {
+		this.onChoose(command);
+	}
+}
 
 export class VimiumSettingTab extends PluginSettingTab {
 	plugin: VimiumPlugin;
@@ -169,5 +208,71 @@ export class VimiumSettingTab extends PluginSettingTab {
 				text.inputEl.rows = 12;
 				text.inputEl.addClass("vimium-selectors-input");
 			});
+
+		this.displayKeyBindings(containerEl);
+	}
+
+	private displayKeyBindings(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Custom key bindings").setHeading();
+		containerEl.createEl("p", {
+			text: "Bind a key to any command from the command palette. Active in reading mode; overrides the built-in keys.",
+			cls: "setting-item-description",
+		});
+
+		this.plugin.settings.keyBindings.forEach((binding, index) => {
+			const row = new Setting(containerEl);
+			row.settingEl.addClass("vimium-keybinding-row");
+
+			row.addText((text) => {
+				text.setPlaceholder("Key").setValue(binding.key);
+				text.inputEl.addClass("vimium-keybinding-key");
+				text.inputEl.readOnly = true;
+				// Capture the next key press instead of parsing typed text, so
+				// keys like "ArrowDown" or shifted characters work naturally.
+				text.inputEl.addEventListener("keydown", (e) => {
+					if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+					e.preventDefault();
+					binding.key = e.key === "Backspace" ? "" : e.key;
+					text.setValue(binding.key);
+					void this.plugin.saveSettings();
+				});
+			});
+
+			row.addButton((button) => {
+				button
+					.setButtonText(binding.commandName || "Choose command…")
+					.onClick(() => {
+						new CommandSuggestModal(this.app, async (command) => {
+							binding.commandId = command.id;
+							binding.commandName = command.name;
+							await this.plugin.saveSettings();
+							button.setButtonText(command.name);
+						}).open();
+					});
+			});
+
+			row.addExtraButton((button) => {
+				button
+					.setIcon("trash")
+					.setTooltip("Remove binding")
+					.onClick(async () => {
+						this.plugin.settings.keyBindings.splice(index, 1);
+						await this.plugin.saveSettings();
+						this.display();
+					});
+			});
+		});
+
+		new Setting(containerEl).addButton((button) => {
+			button.setButtonText("Add binding").onClick(async () => {
+				this.plugin.settings.keyBindings.push({
+					key: "",
+					commandId: "",
+					commandName: "",
+				});
+				await this.plugin.saveSettings();
+				this.display();
+			});
+		});
 	}
 }

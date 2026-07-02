@@ -45,6 +45,14 @@
 	font-family: var(--font-monospace, monospace);
 }
 
+/* One row in the custom key bindings list: key capture field + command button. */
+.vimium-keybinding-row .vimium-keybinding-key {
+	width: 8em;
+	text-align: center;
+	font-family: var(--font-monospace, monospace);
+	cursor: pointer;
+}
+
 /* Small status pill shown while a mode is active. */
 .vimium-mode-indicator {
 	position: fixed;
