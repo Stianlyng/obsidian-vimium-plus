@@ -65,8 +65,6 @@ export interface VimiumSettings {
 	forceReadingView: boolean;
 	/** Turn on Obsidian's native Vim key bindings on load. */
 	enableNativeVim: boolean;
-	/** Max gap (ms) between the two Escapes that exit editing mode. */
-	doubleEscapeMs: number;
 	/** Show a small mode indicator pill. */
 	showModeIndicator: boolean;
 	/** Custom reading-mode key bindings. They override the built-in keys. */
@@ -103,7 +101,6 @@ export const DEFAULT_SETTINGS: VimiumSettings = {
 	scrollStep: 70,
 	forceReadingView: true,
 	enableNativeVim: true,
-	doubleEscapeMs: 400,
 	showModeIndicator: true,
 	keyBindings: [
 		{
@@ -141,7 +138,8 @@ class ConfirmKeyModal extends Modal {
 			.addButton((button) =>
 				button
 					.setButtonText(this.confirmLabel)
-					.setWarning()
+					.setDestructive()
+					.setCta()
 					.onClick(() => {
 						this.confirmed = true;
 						this.close();
@@ -263,19 +261,6 @@ export class VimiumSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Double-Escape timeout")
-			.setDesc("Max gap, in milliseconds, between the two Escapes that return you to Reading mode.")
-			.addSlider((slider) =>
-				slider
-					.setLimits(150, 800, 50)
-					.setValue(this.plugin.settings.doubleEscapeMs)
-					.onChange(async (value) => {
-						this.plugin.settings.doubleEscapeMs = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
 			.setName("Show mode indicator")
 			.setDesc("Show a small pill indicating the current mode.")
 			.addToggle((toggle) =>
@@ -343,11 +328,11 @@ export class VimiumSettingTab extends PluginSettingTab {
 				button
 					.setButtonText(binding.commandName || "Choose command…")
 					.onClick(() => {
-						new CommandSuggestModal(this.app, async (command) => {
+						new CommandSuggestModal(this.app, (command) => {
 							binding.commandId = command.id;
 							binding.commandName = command.name;
-							await this.plugin.saveSettings();
 							button.setButtonText(command.name);
+							void this.plugin.saveSettings();
 						}).open();
 					});
 			});

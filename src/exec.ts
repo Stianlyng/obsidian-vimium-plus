@@ -2,6 +2,23 @@ import { App, FileSystemAdapter, Notice } from "obsidian";
 import { spawn } from "child_process";
 import * as path from "path";
 
+// The plugin-review lint runs without Node typings, so `child_process`,
+// `path` and `process` resolve as `any` there. Pin the narrow surface we use
+// to explicit types so no `any` flows through the code below.
+interface SpawnedChild {
+	on(event: "error", handler: (err: Error) => void): void;
+	unref(): void;
+}
+const spawnDetached = spawn as unknown as (
+	command: string,
+	options: { shell: boolean; detached: boolean; stdio: "ignore"; cwd: string }
+) => SpawnedChild;
+const { join: joinPath, dirname: parentDir } = path as {
+	join: (...parts: string[]) => string;
+	dirname: (p: string) => string;
+};
+const platform = (process as { platform: string }).platform;
+
 /**
  * Run a user-configured shell command, detached so the spawned application
  * outlives Obsidian. The {{path}}, {{folder}} and {{vault}} placeholders are
@@ -15,8 +32,8 @@ export function runTerminalCommand(app: App, template: string): void {
 
 	const vaultDir = adapter.getBasePath();
 	const file = app.workspace.getActiveFile();
-	const notePath = file ? path.join(vaultDir, file.path) : vaultDir;
-	const noteDir = file ? path.dirname(notePath) : vaultDir;
+	const notePath = file ? joinPath(vaultDir, file.path) : vaultDir;
+	const noteDir = file ? parentDir(notePath) : vaultDir;
 
 	// split/join instead of replace() so `$` in paths can't act as a
 	// replacement pattern.
@@ -25,7 +42,7 @@ export function runTerminalCommand(app: App, template: string): void {
 		.split("{{path}}").join(quoteForShell(notePath))
 		.split("{{folder}}").join(quoteForShell(noteDir));
 
-	const child = spawn(command, {
+	const child = spawnDetached(command, {
 		shell: true,
 		detached: true,
 		stdio: "ignore",
@@ -40,6 +57,6 @@ export function runTerminalCommand(app: App, template: string): void {
 function quoteForShell(p: string): string {
 	// cmd.exe on Windows (double quotes; `"` is not legal in Windows paths),
 	// POSIX sh elsewhere (single quotes, with embedded quotes escaped).
-	if (process.platform === "win32") return `"${p}"`;
+	if (platform === "win32") return `"${p}"`;
 	return `'${p.replace(/'/g, `'\\''`)}'`;
 }

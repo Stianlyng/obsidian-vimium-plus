@@ -1,4 +1,4 @@
-import { Plugin } from "obsidian";
+import { MarkdownView, Plugin } from "obsidian";
 import {
 	DEFAULT_SETTINGS,
 	VimiumSettings,
@@ -22,6 +22,10 @@ export default class VimiumPlugin extends Plugin {
 	private scroller!: Scroller;
 
 	private indicatorEl: HTMLElement | null = null;
+	// Whether the native Vim layer is currently in insert mode.
+	private vimInsert = false;
+	// Editors whose vim adapter we subscribed to, so we can unsubscribe on unload.
+	private vimBoundCms = new Set<VimAwareCm>();
 	// Keys buffered while they are still a prefix of some key sequence.
 	private pendingKeys = "";
 	private pendingTimer: number | null = null;
@@ -59,6 +63,7 @@ export default class VimiumPlugin extends Plugin {
 		// Keep newly-activated notes in Reading view while in reading mode.
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
+				this.watchVimMode();
 				void this.modeManager
 					.forceReading(leaf)
 					.then(() => this.modeManager.syncFromView());
@@ -67,9 +72,10 @@ export default class VimiumPlugin extends Plugin {
 		// External view-mode toggles (pencil icon, Ctrl+E) must not leave the
 		// mode state stale.
 		this.registerEvent(
-			this.app.workspace.on("layout-change", () =>
-				this.modeManager.syncFromView()
-			)
+			this.app.workspace.on("layout-change", () => {
+				this.watchVimMode();
+				this.modeManager.syncFromView();
+			})
 		);
 		this.registerEvent(
 			this.app.workspace.on("file-open", () => {
@@ -81,13 +87,20 @@ export default class VimiumPlugin extends Plugin {
 
 		this.registerCommands();
 
-		this.app.workspace.onLayoutReady(() => this.refreshModeIndicator());
+		this.app.workspace.onLayoutReady(() => {
+			this.watchVimMode();
+			this.refreshModeIndicator();
+		});
 	}
 
 	onunload(): void {
 		this.hintEngine?.hide();
 		this.indicatorEl?.remove();
 		this.indicatorEl = null;
+		for (const cm of this.vimBoundCms) {
+			cm.off("vim-mode-change", this.onVimModeChange);
+		}
+		this.vimBoundCms.clear();
 		this.clearPending();
 		this.restoreEditorConfig();
 	}
@@ -187,7 +200,7 @@ export default class VimiumPlugin extends Plugin {
 
 		if (this.modeManager.mode === "editing") {
 			if (e.key === "Escape" && !hasModifier(e)) {
-				if (this.modeManager.handleEditingEscape()) {
+				if (this.modeManager.handleEditingEscape(this.vimInsert)) {
 					e.preventDefault();
 					e.stopPropagation();
 				}
@@ -381,18 +394,48 @@ export default class VimiumPlugin extends Plugin {
 			this.indicatorEl = null;
 			return;
 		}
-		// Recreate the pill in whichever window is focused so it follows the
-		// user into pop-out windows.
-		if (!this.indicatorEl || this.indicatorEl.ownerDocument !== activeDocument) {
-			this.indicatorEl?.remove();
-			this.indicatorEl = activeDocument.body.createDiv({
-				cls: "vimium-mode-indicator",
-			});
+		if (!this.indicatorEl) {
+			this.indicatorEl = this.addStatusBarItem();
+			this.indicatorEl.addClass("vimium-mode-indicator");
 		}
-		const label =
-			this.modeManager.mode === "editing" ? "-- EDITING --" : "-- READING --";
-		this.indicatorEl.setText(label);
+		const editing = this.modeManager.mode === "editing";
+		const insert = editing && this.vimInsert;
+		this.indicatorEl.setText(insert ? "INSERT" : editing ? "NORMAL" : "READING");
+		this.indicatorEl.toggleClass("mod-normal", editing && !insert);
+		this.indicatorEl.toggleClass("mod-insert", insert);
 	}
+
+	/** Subscribe to the active editor's vim adapter so the indicator can reflect insert mode. */
+	private watchVimMode(): void {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const cm = (
+			view as unknown as {
+				editMode?: { editor?: { cm?: { cm?: VimAwareCm } } };
+			} | null
+		)?.editMode?.editor?.cm?.cm;
+		if (!cm?.on || this.vimBoundCms.has(cm)) return;
+		this.vimBoundCms.add(cm);
+		cm.on("vim-mode-change", this.onVimModeChange);
+	}
+
+	private readonly onVimModeChange = (modeObj?: { mode?: string }): void => {
+		const insert = modeObj?.mode === "insert";
+		if (insert === this.vimInsert) return;
+		this.vimInsert = insert;
+		this.refreshModeIndicator();
+	};
+}
+
+/** The CM5-flavoured vim adapter Obsidian attaches to markdown editors. */
+interface VimAwareCm {
+	on(
+		event: "vim-mode-change",
+		handler: (modeObj?: { mode?: string }) => void
+	): void;
+	off(
+		event: "vim-mode-change",
+		handler: (modeObj?: { mode?: string }) => void
+	): void;
 }
 
 function hasModifier(e: KeyboardEvent): boolean {

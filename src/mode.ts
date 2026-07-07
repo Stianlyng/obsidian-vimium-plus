@@ -5,8 +5,8 @@ export type Mode = "reading" | "editing";
 
 /**
  * Owns the reading/editing mode state, forces notes into Reading view while in
- * reading mode, flips into the editor on `i`, and implements the double-Escape
- * exit back to reading.
+ * reading mode, flips into the editor on `i`, and handles the Escape exit back
+ * to reading.
  */
 export class ModeManager {
 	private app: App;
@@ -14,7 +14,6 @@ export class ModeManager {
 	private onChange: () => void;
 
 	private _mode: Mode = "reading";
-	private lastEscape = 0;
 
 	constructor(app: App, settings: VimiumSettings, onChange: () => void) {
 		this.app = app;
@@ -32,7 +31,6 @@ export class ModeManager {
 		if (!view) return;
 
 		this._mode = "editing";
-		this.lastEscape = 0;
 		this.onChange();
 
 		await this.setLeafMode(view.leaf, "source");
@@ -54,19 +52,14 @@ export class ModeManager {
 	}
 
 	/**
-	 * Handle an Escape press while in editing mode. The first Escape is left for
-	 * native Vim (insert→normal); a second Escape within the timeout returns to
-	 * reading. Returns true if it triggered the exit (consume the event).
+	 * Handle an Escape press while in editing mode. In Vim insert mode the key
+	 * is left for native Vim (insert→normal); otherwise it returns to reading.
+	 * Returns true if it triggered the exit (consume the event).
 	 */
-	handleEditingEscape(): boolean {
-		const now = Date.now();
-		if (now - this.lastEscape <= this.settings.doubleEscapeMs) {
-			this.lastEscape = 0;
-			void this.exitToReading();
-			return true;
-		}
-		this.lastEscape = now;
-		return false;
+	handleEditingEscape(vimInsert: boolean): boolean {
+		if (vimInsert) return false;
+		void this.exitToReading();
+		return true;
 	}
 
 	/**
@@ -79,7 +72,6 @@ export class ModeManager {
 		const actual: Mode = view.getMode() === "preview" ? "reading" : "editing";
 		if (actual !== this._mode) {
 			this._mode = actual;
-			this.lastEscape = 0;
 			this.onChange();
 		}
 	}

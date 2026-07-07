@@ -1,8 +1,8 @@
 {
 	"id": "vimium-plus",
 	"name": "Vimium+",
-	"version": "0.2.0",
-	"minAppVersion": "1.4.0",
+	"version": "0.3.0",
+	"minAppVersion": "1.13.0",
 	"description": "Navigate with Vimium-style keys: f for click hints, j/k/d/u scrolling, J/K tab switching, and i to drop into the editor's native Vim mode.",
 	"author": "Stian Lyng",
 	"isDesktopOnly": true
