@@ -30,12 +30,44 @@ export class ModeManager {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view) return;
 
+		const centerLine = this.getReadingCenterLine(view);
+
 		this._mode = "editing";
 		this.onChange();
 
 		await this.setLeafMode(view.leaf, "source");
 		const fresh = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (fresh && centerLine !== null) {
+			const pos = { line: centerLine, ch: 0 };
+			fresh.editor.setCursor(pos);
+			fresh.editor.scrollIntoView({ from: pos, to: pos }, true);
+		}
 		fresh?.editor.focus();
+	}
+
+	/**
+	 * Estimate which source line sits at the vertical center of the Reading
+	 * view's viewport, so `enterEditing` can drop the cursor there instead of
+	 * wherever the editor's cursor last happened to be. Obsidian only exposes
+	 * the top-of-viewport line (`previewMode.getScroll()`), so the center is
+	 * approximated by scaling the total line count by how much of the
+	 * document's rendered height is currently visible.
+	 */
+	private getReadingCenterLine(view: MarkdownView): number | null {
+		const totalLines = view.editor.lineCount();
+		if (totalLines <= 0) return null;
+
+		const container = view.containerEl.querySelector<HTMLElement>(
+			".markdown-preview-view"
+		);
+		if (!container || container.scrollHeight <= 0) return null;
+
+		const topLine = view.previewMode.getScroll();
+		const viewportLines =
+			(container.clientHeight / container.scrollHeight) * totalLines;
+		const centerLine = Math.round(topLine + viewportLines / 2);
+
+		return Math.min(Math.max(centerLine, 0), totalLines - 1);
 	}
 
 	/** Switch the active note back into Reading view. */
