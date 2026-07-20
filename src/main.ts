@@ -7,6 +7,7 @@ import {
 import { ModeManager } from "./mode";
 import { HintEngine } from "./hints/hint-engine";
 import { Scroller } from "./scroll";
+import { WebviewBridge } from "./webview";
 import {
 	OmniOpenModal,
 	collectBookmarkItems,
@@ -20,6 +21,7 @@ export default class VimiumPlugin extends Plugin {
 	private modeManager!: ModeManager;
 	private hintEngine!: HintEngine;
 	private scroller!: Scroller;
+	private webviewBridge!: WebviewBridge;
 
 	private indicatorEl: HTMLElement | null = null;
 	// Whether the native Vim layer is currently in insert mode.
@@ -48,6 +50,11 @@ export default class VimiumPlugin extends Plugin {
 			this.refreshModeIndicator()
 		);
 		this.scroller = new Scroller(this.app);
+		this.webviewBridge = new WebviewBridge(
+			this.app,
+			() => this.settings,
+			() => this.refreshModeIndicator()
+		);
 
 		this.applyEditorConfig();
 
@@ -64,6 +71,10 @@ export default class VimiumPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", (leaf) => {
 				this.watchVimMode();
+				this.webviewBridge.ensureAll();
+				// syncFromView no-ops on non-markdown views, so webview leaves
+				// need the indicator refreshed here.
+				this.refreshModeIndicator();
 				void this.modeManager
 					.forceReading(leaf)
 					.then(() => this.modeManager.syncFromView());
@@ -74,6 +85,7 @@ export default class VimiumPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
 				this.watchVimMode();
+				this.webviewBridge.ensureAll();
 				this.modeManager.syncFromView();
 			})
 		);
@@ -89,11 +101,13 @@ export default class VimiumPlugin extends Plugin {
 
 		this.app.workspace.onLayoutReady(() => {
 			this.watchVimMode();
+			this.webviewBridge.ensureAll();
 			this.refreshModeIndicator();
 		});
 	}
 
 	onunload(): void {
+		this.webviewBridge?.destroy();
 		this.hintEngine?.hide();
 		this.indicatorEl?.remove();
 		this.indicatorEl = null;
@@ -114,6 +128,8 @@ export default class VimiumPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+		// Keep live webview guests in sync with hint/scroll settings.
+		this.webviewBridge?.reinjectAll();
 	}
 
 	private applyEditorConfig(): void {
@@ -155,6 +171,12 @@ export default class VimiumPlugin extends Plugin {
 		}
 	}
 
+	/** Turn the Web viewer (webview) integration on or off at runtime. */
+	applyWebviewIntegration(enabled: boolean): void {
+		this.webviewBridge?.setEnabled(enabled);
+		this.refreshModeIndicator();
+	}
+
 	private bindWindow(doc: Document): void {
 		this.registerDomEvent(doc, "keydown", (e) => this.onKeyDown(e), {
 			capture: true,
@@ -167,12 +189,12 @@ export default class VimiumPlugin extends Plugin {
 		this.addCommand({
 			id: "show-hints",
 			name: "Show click hints",
-			callback: () => this.hintEngine.show(false),
+			callback: () => this.showHints(false),
 		});
 		this.addCommand({
 			id: "show-hints-new-tab",
 			name: "Show click hints (open in new tab)",
-			callback: () => this.hintEngine.show(true),
+			callback: () => this.showHints(true),
 		});
 		this.addCommand({
 			id: "enter-editing",
@@ -198,7 +220,22 @@ export default class VimiumPlugin extends Plugin {
 			return;
 		}
 
-		if (this.modeManager.mode === "editing") {
+		// Letters for a guest (webview) hint session started from host focus
+		// are relayed into the page, since focus() after a keyboard tab-switch
+		// is not reliable.
+		if (this.webviewBridge.hintRelayActive) {
+			if (this.webviewBridge.relayHintKey(e.key)) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
+			return;
+		}
+
+		// A webview leaf is never a markdown editor, but the mode state can be
+		// stale "editing" there (syncFromView no-ops without a MarkdownView),
+		// so the editing branch must not swallow keys on webview leaves.
+		const webviewActive = this.webviewBridge.activeWebview() !== null;
+		if (!webviewActive && this.modeManager.mode === "editing") {
 			if (e.key === "Escape" && !hasModifier(e)) {
 				if (this.modeManager.handleEditingEscape(this.vimInsert)) {
 					e.preventDefault();
@@ -273,7 +310,14 @@ export default class VimiumPlugin extends Plugin {
 				});
 			}
 		}
-		targets.push({ seq: "gg", run: () => this.scroller.toTop() });
+		targets.push({
+			seq: "gg",
+			run: () => {
+				const webview = this.webviewBridge.activeWebview();
+				if (webview) this.webviewBridge.run(webview, "top");
+				else this.scroller.toTop();
+			},
+		});
 		return targets;
 	}
 
@@ -304,18 +348,24 @@ export default class VimiumPlugin extends Plugin {
 	private static readonly CHORD_TIMEOUT_MS = 600;
 
 	private runBuiltinKey(key: string): boolean {
+		// On a webview (Web viewer) leaf with host focus, scroll/hint/history
+		// keys are forwarded into the guest page; everything else keeps its
+		// normal Obsidian behavior.
+		const webview = this.webviewBridge.activeWebview();
 		switch (key) {
 			case "f":
-				this.hintEngine.show(false);
+				this.showHints(false);
 				return true;
 			case "F":
-				this.hintEngine.show(true);
+				this.showHints(true);
 				return true;
 			case "j":
-				this.scroller.lineDown(this.settings.scrollStep);
+				if (webview) this.webviewBridge.run(webview, "scrollDown");
+				else this.scroller.lineDown(this.settings.scrollStep);
 				return true;
 			case "k":
-				this.scroller.lineUp(this.settings.scrollStep);
+				if (webview) this.webviewBridge.run(webview, "scrollUp");
+				else this.scroller.lineUp(this.settings.scrollStep);
 				return true;
 			case "J":
 				this.app.commands.executeCommandById("workspace:next-tab");
@@ -324,13 +374,16 @@ export default class VimiumPlugin extends Plugin {
 				this.app.commands.executeCommandById("workspace:previous-tab");
 				return true;
 			case "d":
-				this.scroller.halfPageDown();
+				if (webview) this.webviewBridge.run(webview, "halfDown");
+				else this.scroller.halfPageDown();
 				return true;
 			case "u":
-				this.scroller.halfPageUp();
+				if (webview) this.webviewBridge.run(webview, "halfUp");
+				else this.scroller.halfPageUp();
 				return true;
 			case "G":
-				this.scroller.toBottom();
+				if (webview) this.webviewBridge.run(webview, "bottom");
+				else this.scroller.toBottom();
 				return true;
 			case "i":
 				void this.modeManager.enterEditing();
@@ -357,14 +410,24 @@ export default class VimiumPlugin extends Plugin {
 				this.app.commands.executeCommandById("workspace:undo-close-pane");
 				return true;
 			case "H":
-				this.app.commands.executeCommandById("app:go-back");
+				// Page history on a web tab; Obsidian leaf history elsewhere.
+				if (webview) this.webviewBridge.run(webview, "historyBack");
+				else this.app.commands.executeCommandById("app:go-back");
 				return true;
 			case "L":
-				this.app.commands.executeCommandById("app:go-forward");
+				if (webview) this.webviewBridge.run(webview, "historyForward");
+				else this.app.commands.executeCommandById("app:go-forward");
 				return true;
 		}
 
 		return false;
+	}
+
+	/** Hints on the active surface: the webview guest if present, else the host. */
+	private showHints(newTab: boolean): void {
+		const webview = this.webviewBridge.activeWebview();
+		if (webview) this.webviewBridge.startHints(webview, newTab);
+		else this.hintEngine.show(newTab);
 	}
 
 	private openBookmarkSearch(newTab: boolean): void {
@@ -397,6 +460,12 @@ export default class VimiumPlugin extends Plugin {
 		if (!this.indicatorEl) {
 			this.indicatorEl = this.addStatusBarItem();
 			this.indicatorEl.addClass("vimium-mode-indicator");
+		}
+		if (this.webviewBridge?.activeWebview()) {
+			this.indicatorEl.setText("WEB");
+			this.indicatorEl.toggleClass("mod-normal", false);
+			this.indicatorEl.toggleClass("mod-insert", false);
+			return;
 		}
 		const editing = this.modeManager.mode === "editing";
 		const insert = editing && this.vimInsert;

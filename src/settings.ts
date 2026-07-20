@@ -67,6 +67,8 @@ export interface VimiumSettings {
 	enableNativeVim: boolean;
 	/** Show a small mode indicator pill. */
 	showModeIndicator: boolean;
+	/** Inject vim keys and hints into Web viewer tabs (Electron webviews). */
+	enableWebviewIntegration: boolean;
 	/** Custom reading-mode key bindings. They override the built-in keys. */
 	keyBindings: KeyBinding[];
 	/** Keys that spawn a shell command (desktop only). */
@@ -102,6 +104,7 @@ export const DEFAULT_SETTINGS: VimiumSettings = {
 	forceReadingView: true,
 	enableNativeVim: true,
 	showModeIndicator: true,
+	enableWebviewIntegration: true,
 	keyBindings: [
 		{
 			key: "p",
@@ -270,6 +273,19 @@ export class VimiumSettingTab extends PluginSettingTab {
 						this.plugin.settings.showModeIndicator = value;
 						await this.plugin.saveSettings();
 						this.plugin.refreshModeIndicator();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Web viewer integration")
+			.setDesc("Inject the vim keys (scrolling, hints, tab switching) into Web viewer pages. Custom key bindings and terminal commands still require focus to be outside the page.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableWebviewIntegration)
+					.onChange(async (value) => {
+						this.plugin.settings.enableWebviewIntegration = value;
+						await this.plugin.saveSettings();
+						this.plugin.applyWebviewIntegration(value);
 					})
 			);
 

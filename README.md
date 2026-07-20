@@ -32,6 +32,14 @@ Any key — or a multi-key sequence like `gT` — can be bound to any command-pa
 
 While hints are showing: type the label to activate, `Backspace` to correct, `Esc` to cancel. Holding `Shift` on the **last** letter of a label opens that target in a new tab (even if you started with plain `f`).
 
+## Web viewer tabs
+
+The vim keys also work inside pages opened with Obsidian's core **Web viewer** plugin. Web pages render in a separate Electron webview that the plugin can't reach directly, so a small self-contained script is injected into each page instead (toggleable in settings as **Web viewer integration**).
+
+Inside a page: `j`/`k`/`d`/`u`/`gg`/`G` scroll, `f`/`F` show hints over the page's links and controls (`F` opens the link in a new Web viewer tab), `H`/`L` go back/forward in the page's history, and `J`/`K`/`t`/`x` switch/open/close Obsidian tabs. Typing in a page's text field passes keys through as usual; `Esc` blurs the field, and `Esc` again hands focus back to Obsidian.
+
+Limitations: custom key bindings and terminal commands don't fire while the page itself has focus (the page-to-Obsidian channel is intentionally restricted to a small fixed set of actions, since a malicious page could forge it) — press `Esc` first, then they work as normal. Hints cover the page's top frame only, and some pages (PDFs, error pages) refuse script injection entirely.
+
 ## How the modes map to Obsidian
 
 The plugin ties "command mode" to Obsidian's **Reading view** rather than a fragile focus heuristic. It forces every note to open in Reading view (toggleable in settings) and turns on Obsidian's native Vim key bindings, so `i` lands you in a real Vim editor. Both overridden settings are restored when you disable the plugin.
@@ -40,7 +48,7 @@ The double-Escape exit is timing-based: the first `Esc` is left for Vim (insert�
 
 ## Settings
 
-Hint characters, hint font size, scroll step, force-Reading-view toggle, native-Vim toggle, double-Escape timeout, mode-indicator toggle, and the list of CSS selectors that become hint targets.
+Hint characters, hint font size, scroll step, force-Reading-view toggle, native-Vim toggle, double-Escape timeout, mode-indicator toggle, Web viewer integration toggle, and the list of CSS selectors that become hint targets.
 
 ## Build
 
